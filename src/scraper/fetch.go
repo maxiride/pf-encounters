@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 func getAONCreatures(url string) string {
@@ -38,13 +40,16 @@ func (d *Data) parseAONTable(data string) {
 				switch indexth {
 				case 0:
 					c.Name = tablecell.Text()
-					str := tablecell.Find("a").AttrOr("href", "")
-					equalIndex := strings.LastIndex(str, "=")
-					c.Id = str[equalIndex+1:]
+					c.Id = tablecell.Find("a").AttrOr("href", "")
+
 				case 1:
 					c.Family = tablecell.Text()
 				case 2:
-					c.Level = tablecell.Text()
+					level, err := strconv.Atoi(tablecell.Text())
+					if err != nil {
+						level = -999
+					}
+					c.Level = level
 				case 3:
 					c.Alignment = tablecell.Text()
 				case 4:
@@ -58,6 +63,11 @@ func (d *Data) parseAONTable(data string) {
 		})
 	})
 
-	// Drop first entry which is the table header row
-	d.Creatures = d.Creatures[1:]
+	// Drop all empty lines, corresponding to the headers of the tables.
+	for i, v := range d.Creatures {
+		if v.Id == "" {
+			d.Creatures = append(d.Creatures[:i], d.Creatures[i+1:]...)
+		}
+	}
+
 }
